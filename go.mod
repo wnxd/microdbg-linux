@@ -2,9 +2,6 @@ module github.com/wnxd/microdbg-linux
 
 go 1.23.4
 
-require github.com/wnxd/microdbg v0.0.0-20250117154656-fb1e672388b3
+require github.com/wnxd/microdbg v0.0.0-20250119165022-5eec743ce616
 
-require (
-	github.com/modern-go/reflect2 v1.0.2 // indirect
-	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67 // indirect
-)
+require golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8 // indirect
