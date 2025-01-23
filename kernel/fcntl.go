@@ -30,16 +30,16 @@ type iovec struct {
 	iov_len  size_t
 }
 
-type stat32 struct {
+type stat3264 struct {
 	st_dev     uint64
-	__pad0     uint32
+	_          uint32
 	__st_ino   ino_t
 	st_mode    mode_t
 	st_nlink   nlink_t
 	st_uid     uid_t
 	st_gid     gid_t
 	st_rdev    uint64
-	__pad3     uint32
+	_          uint32
 	st_size    int64
 	st_blksize ulong_t
 	st_blocks  uint64
@@ -57,17 +57,37 @@ type stat64 struct {
 	st_uid     uid_t
 	st_gid     gid_t
 	st_rdev    dev_t
-	__pad1     ulong_t
+	_          ulong_t
 	st_size    off_t
 	st_blksize int32
-	__pad2     int32
+	_          int32
 	st_blocks  long_t
 	st_atim    timespec
 	st_mtim    timespec
 	st_ctim    timespec
-	__unused4  uint32
-	__unused5  uint32
+	_          uint32
+	_          uint32
 }
+
+var (
+	_ = stat3264{}.st_dev
+	_ = stat3264{}.__st_ino
+	_ = stat3264{}.st_nlink
+	_ = stat3264{}.st_uid
+	_ = stat3264{}.st_gid
+	_ = stat3264{}.st_rdev
+	_ = stat3264{}.st_blksize
+	_ = stat3264{}.st_blocks
+	_ = stat3264{}.st_ino
+	_ = stat64{}.st_dev
+	_ = stat64{}.st_ino
+	_ = stat64{}.st_nlink
+	_ = stat64{}.st_uid
+	_ = stat64{}.st_gid
+	_ = stat64{}.st_rdev
+	_ = stat64{}.st_blksize
+	_ = stat64{}.st_blocks
+)
 
 type fcntl struct {
 	rw    sync.RWMutex
@@ -195,6 +215,29 @@ func (f *fcntl) faccessat(ctx linux.Context, dfd int32, filename emuptr, mode in
 	return 0
 }
 
+func (f *fcntl) open(ctx linux.Context, filename emuptr, flags, mode int32) int32 {
+	path, err := ctx.ToPointer(filename).MemReadString()
+	if err != nil {
+		ctx.SetErrno(linux.ENOENT)
+		return -1
+	}
+	dbg := ctx.Debugger()
+	file, err := dbg.OpenFile(path, toFileFlag(flags), fs.FileMode(mode))
+	if err != nil {
+		if errors.Is(err, fs.ErrExist) {
+			ctx.SetErrno(linux.EEXIST)
+			return -1
+		}
+		ctx.SetErrno(linux.ENOENT)
+		return -1
+	}
+	fd := dbg.CreateFileDescriptor(file)
+	f.rw.Lock()
+	f.flags[fd] = flags
+	f.rw.Unlock()
+	return int32(fd)
+}
+
 func (f *fcntl) openat(ctx linux.Context, dfd int32, filename emuptr, flags, mode int32) int32 {
 	path, err := ctx.ToPointer(filename).MemReadString()
 	if err != nil {
@@ -278,7 +321,8 @@ func (f *fcntl) lseek(ctx linux.Context, fd uint32, offset off_t, whence int32) 
 		}
 		return off_t(off)
 	}
-	panic("lseek")
+	ctx.SetErrno(linux.EINVAL)
+	return -1
 }
 
 func (f *fcntl) read(ctx linux.Context, fd uint32, buf emuptr, count size_t) ssize_t {
@@ -379,7 +423,7 @@ func (f *fcntl) readlinkat(ctx linux.Context, dfd int32, filename, buf emuptr, b
 	return ssize_t(size)
 }
 
-func (f *fcntl) newfstatat32(ctx linux.Context, dfd int32, filename, statbuf emuptr, flag int32) int32 {
+func (f *fcntl) fstatat3264(ctx linux.Context, dfd int32, filename, statbuf emuptr, flag int32) int32 {
 	path, err := ctx.ToPointer(filename).MemReadString()
 	if err != nil {
 		ctx.SetErrno(linux.ENOENT)
@@ -407,7 +451,7 @@ func (f *fcntl) newfstatat32(ctx linux.Context, dfd int32, filename, statbuf emu
 		ctx.SetErrno(linux.ENOENT)
 		return -1
 	}
-	var stat stat32
+	var stat stat3264
 	mode := info.Mode()
 	stat.st_mode = mode_t(mode.Perm())
 	switch mode.Type() {
@@ -439,7 +483,7 @@ func (f *fcntl) newfstatat32(ctx linux.Context, dfd int32, filename, statbuf emu
 	return 0
 }
 
-func (f *fcntl) newfstatat64(ctx linux.Context, dfd int32, filename, statbuf emuptr, flag int32) int32 {
+func (f *fcntl) fstatat64(ctx linux.Context, dfd int32, filename, statbuf emuptr, flag int32) int32 {
 	path, err := ctx.ToPointer(filename).MemReadString()
 	if err != nil {
 		ctx.SetErrno(linux.ENOENT)
@@ -499,7 +543,7 @@ func (f *fcntl) newfstatat64(ctx linux.Context, dfd int32, filename, statbuf emu
 	return 0
 }
 
-func (f *fcntl) fstat32(ctx linux.Context, fd uint32, statbuf emuptr) int32 {
+func (f *fcntl) fstat3264(ctx linux.Context, fd uint32, statbuf emuptr) int32 {
 	dbg := ctx.Debugger()
 	file, err := dbg.GetFile(int(fd))
 	if err != nil {
@@ -511,7 +555,7 @@ func (f *fcntl) fstat32(ctx linux.Context, fd uint32, statbuf emuptr) int32 {
 		ctx.SetErrno(linux.ENOENT)
 		return -1
 	}
-	var stat stat32
+	var stat stat3264
 	mode := info.Mode()
 	stat.st_mode = mode_t(mode.Perm())
 	switch mode.Type() {

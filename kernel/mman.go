@@ -9,6 +9,8 @@ import (
 	"github.com/wnxd/microdbg/filesystem"
 )
 
+const PAGE_SIZE = 4096
+
 type mman struct {
 }
 
@@ -21,7 +23,7 @@ func (k *mman) munmap(ctx linux.Context, addr emuptr, len size_t) int32 {
 	return 0
 }
 
-func (k *mman) mmap(ctx linux.Context, addr emuptr, len size_t, prot emulator.MemProt, flags, fd int32, offset off_t) emulator.Uintptr64 {
+func (k *mman) mmap(ctx linux.Context, addr emuptr, len size_t, prot emulator.MemProt, flags, fd int32, offset off_t) emuptr {
 	const (
 		MAP_FAILED    = math.MaxUint64
 		MAP_SHARED    = 0x01
@@ -81,6 +83,10 @@ func (k *mman) mmap(ctx linux.Context, addr emuptr, len size_t, prot emulator.Me
 		return MAP_FAILED
 	}
 	return addr
+}
+
+func (k *mman) mmap2(ctx linux.Context, addr emuptr, len size_t, prot emulator.MemProt, flags, fd int32, count size_t) emuptr {
+	return k.mmap(ctx, addr, len, prot, flags, fd, off_t(count*PAGE_SIZE))
 }
 
 func (k *mman) mprotect(ctx linux.Context, start emuptr, len size_t, prot emulator.MemProt) int32 {

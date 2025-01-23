@@ -59,6 +59,8 @@ func (k *Kernel) SetErrno(err linux.Errno) {
 }
 
 func (k *Kernel) armIntr(ctx debugger.Context, intno uint64, data any) debugger.HookResult {
+	const CPSR_T = 1 << 5
+
 	if intno != emu_arm.ARM_INTR_EXCP_SWI {
 		return debugger.HookResult_Next
 	}
@@ -66,8 +68,7 @@ func (k *Kernel) armIntr(ctx debugger.Context, intno uint64, data any) debugger.
 	if err != nil {
 		return debugger.HookResult_Next
 	}
-	const THUMB_BIT = 5
-	if pc_cpsr[1]&THUMB_BIT != 0 {
+	if pc_cpsr[1]&CPSR_T != 0 {
 		var code uint16
 		err = ctx.ToPointer(pc_cpsr[0]-2).MemReadPtr(2, unsafe.Pointer(&code))
 		if err != nil {

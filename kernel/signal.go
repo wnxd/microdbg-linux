@@ -28,6 +28,17 @@ type siginfo_t struct {
 	_si_pad  [29]int32
 }
 
+var (
+	_ = sigaction{}.sa_handler
+	_ = sigaction{}.sa_flags
+	_ = sigaction{}.sa_mask
+	_ = sigaction{}.sa_restorer
+	_ = siginfo_t{}.si_signo
+	_ = siginfo_t{}.si_errno
+	_ = siginfo_t{}.si_code
+	_ = siginfo_t{}._si_pad
+)
+
 func (set *sigset_t) sigemptyset() {
 	*set = 0
 }

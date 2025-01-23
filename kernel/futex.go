@@ -106,8 +106,7 @@ func (f *futex) futex(ctx linux.Context, uaddr emuptr, op int32, val uint32, uti
 	case FUTEX_WAKE:
 		ch := f.getAwait(uaddr)
 		if ch == nil {
-			ctx.SetErrno(linux.EAGAIN)
-			return -1
+			return 0
 		}
 		var value uint32
 		err := ctx.ToPointer(uaddr).MemReadPtr(4, unsafe.Pointer(&value))
@@ -127,8 +126,9 @@ func (f *futex) futex(ctx linux.Context, uaddr emuptr, op int32, val uint32, uti
 	case FUTEX_CMP_REQUEUE:
 		panic(fmt.Sprint("futex: FUTEX_CMP_REQUEUE", uaddr, val, uaddr2, val3))
 	case FUTEX_WAIT_BITSET:
+		ptr := ctx.ToPointer(uaddr)
 		var raw uint32
-		err := ctx.ToPointer(uaddr).MemReadPtr(4, unsafe.Pointer(&raw))
+		err := ptr.MemReadPtr(4, unsafe.Pointer(&raw))
 		if err != nil {
 			ctx.SetErrno(linux.EFAULT)
 			return -1
@@ -159,12 +159,17 @@ func (f *futex) futex(ctx linux.Context, uaddr emuptr, op int32, val uint32, uti
 				if !ok {
 					ctx.SetErrno(linux.EPERM)
 					return -1
-				}
-				if raw != val {
+				} else if raw != val {
 					return 0
 				}
 			case <-ch2:
-				return 0
+				err = ptr.MemReadPtr(4, unsafe.Pointer(&raw))
+				if err != nil {
+					ctx.SetErrno(linux.EFAULT)
+					return -1
+				} else if raw != val {
+					return 0
+				}
 			}
 		}
 	case FUTEX_WAKE_BITSET:
@@ -176,9 +181,15 @@ func (f *futex) futex(ctx linux.Context, uaddr emuptr, op int32, val uint32, uti
 			if bit&val3 == 0 {
 				continue
 			}
-			close(await.ch)
-			i += int32(await.ref)
-			if i >= count {
+			for ; i != count; i++ {
+				select {
+				case await.ch <- struct{}{}:
+				default:
+					goto exit
+				}
+			}
+		exit:
+			if i == count {
 				break
 			}
 		}
@@ -213,11 +224,13 @@ func (f *futex) addAwait(addr emuptr) <-chan uint32 {
 func (f *futex) delAwait(addr emuptr) {
 	f.rw.Lock()
 	defer f.rw.Unlock()
-	if await, ok := f.awaits[addr]; ok {
-		await.ref--
-		if await.ref <= 0 {
-			delete(f.awaits, addr)
-		}
+	await, ok := f.awaits[addr]
+	if !ok {
+		return
+	}
+	await.ref--
+	if await.ref <= 0 {
+		delete(f.awaits, addr)
 	}
 }
 

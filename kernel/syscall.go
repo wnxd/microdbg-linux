@@ -1,6 +1,8 @@
 package kernel
 
 import (
+	"math"
+
 	linux "github.com/wnxd/microdbg-linux"
 	"github.com/wnxd/microdbg/emulator"
 )
@@ -36,6 +38,8 @@ func (sys *Syscall) Close() error {
 
 func (sys *Syscall) Get(nr linux.NR) func(linux.Context, ...uint64) uint64 {
 	switch nr {
+	case linux.NR_reject:
+		return sys.Reject
 	case linux.NR_ignore:
 		return sys.Ignore
 	case linux.NR_dup3:
@@ -44,6 +48,8 @@ func (sys *Syscall) Get(nr linux.NR) func(linux.Context, ...uint64) uint64 {
 		return sys.Emulate_fcntl
 	case linux.NR_faccessat:
 		return sys.Emulate_faccessat
+	case linux.NR_open:
+		return sys.Emulate_open
 	case linux.NR_openat:
 		return sys.Emulate_openat
 	case linux.NR_close:
@@ -60,16 +66,18 @@ func (sys *Syscall) Get(nr linux.NR) func(linux.Context, ...uint64) uint64 {
 		return sys.Emulate_writev
 	case linux.NR_readlinkat:
 		return sys.Emulate_readlinkat
-	case linux.NR_newfstatat:
-		return sys.Emulate_newfstatat
-	case linux.NR_fstat:
-		return sys.Emulate_fstat
+	case linux.NR_fstatat64:
+		return sys.Emulate_fstatat64
+	case linux.NR_fstat64:
+		return sys.Emulate_fstat64
 	case linux.NR_exit, linux.NR_exit_group:
 		return sys.Emulate_exit
 	case linux.NR_futex:
 		return sys.Emulate_futex
 	case linux.NR_clock_gettime:
 		return sys.Emulate_clock_gettime
+	case linux.NR_sigaltstack:
+		return sys.Ignore
 	case linux.NR_rt_sigaction:
 		return sys.Emulate_rt_sigaction
 	case linux.NR_rt_sigprocmask:
@@ -84,6 +92,8 @@ func (sys *Syscall) Get(nr linux.NR) func(linux.Context, ...uint64) uint64 {
 		return sys.Ignore
 	case linux.NR_gettid:
 		return sys.Emulate_gettid
+	case linux.NR_sysinfo:
+		return sys.Emulate_sysinfo
 	case linux.NR_socket:
 		return sys.Emulate_socket
 	case linux.NR_munmap:
@@ -94,16 +104,23 @@ func (sys *Syscall) Get(nr linux.NR) func(linux.Context, ...uint64) uint64 {
 		return sys.Emulate_execve
 	case linux.NR_mmap:
 		return sys.Emulate_mmap
+	case linux.NR_mmap2:
+		return sys.Emulate_mmap2
 	case linux.NR_mprotect:
 		return sys.Emulate_mprotect
 	case linux.NR_madvise:
-		return sys.Ignore
+		return sys.Reject
 	case linux.NR_rt_tgsigqueueinfo:
 		return sys.Emulate_rt_tgsigqueueinfo
 	case linux.NR_getrandom:
 		return sys.Emulate_getrandom
 	}
 	return nil
+}
+
+func (sys *Syscall) Reject(ctx linux.Context, args ...uint64) uint64 {
+	ctx.SetErrno(linux.ENOSYS)
+	return math.MaxUint64
 }
 
 func (sys *Syscall) Ignore(ctx linux.Context, args ...uint64) uint64 {
@@ -122,6 +139,11 @@ func (sys *Syscall) Emulate_fcntl(ctx linux.Context, args ...uint64) uint64 {
 
 func (sys *Syscall) Emulate_faccessat(ctx linux.Context, args ...uint64) uint64 {
 	r := sys.fcntl.faccessat(ctx, int32(args[0]), args[1], int32(args[2]))
+	return uint64(r)
+}
+
+func (sys *Syscall) Emulate_open(ctx linux.Context, args ...uint64) uint64 {
+	r := sys.fcntl.open(ctx, args[0], int32(args[1]), int32(args[2]))
 	return uint64(r)
 }
 
@@ -165,13 +187,13 @@ func (sys *Syscall) Emulate_readlinkat(ctx linux.Context, args ...uint64) uint64
 	return uint64(r)
 }
 
-func (sys *Syscall) Emulate_newfstatat(ctx linux.Context, args ...uint64) uint64 {
+func (sys *Syscall) Emulate_fstatat64(ctx linux.Context, args ...uint64) uint64 {
 	var r int32
 	switch ctx.Debugger().Emulator().Arch() {
 	case emulator.ARCH_ARM, emulator.ARCH_X86:
-		r = sys.fcntl.newfstatat32(ctx, int32(args[0]), args[1], args[2], int32(args[3]))
+		r = sys.fcntl.fstatat3264(ctx, int32(args[0]), args[1], args[2], int32(args[3]))
 	case emulator.ARCH_ARM64, emulator.ARCH_X86_64:
-		r = sys.fcntl.newfstatat64(ctx, int32(args[0]), args[1], args[2], int32(args[3]))
+		r = sys.fcntl.fstatat64(ctx, int32(args[0]), args[1], args[2], int32(args[3]))
 	default:
 		ctx.SetErrno(linux.ENOSYS)
 		r = -1
@@ -179,11 +201,11 @@ func (sys *Syscall) Emulate_newfstatat(ctx linux.Context, args ...uint64) uint64
 	return uint64(r)
 }
 
-func (sys *Syscall) Emulate_fstat(ctx linux.Context, args ...uint64) uint64 {
+func (sys *Syscall) Emulate_fstat64(ctx linux.Context, args ...uint64) uint64 {
 	var r int32
 	switch ctx.Debugger().Emulator().Arch() {
 	case emulator.ARCH_ARM, emulator.ARCH_X86:
-		r = sys.fcntl.fstat32(ctx, uint32(args[0]), args[1])
+		r = sys.fcntl.fstat3264(ctx, uint32(args[0]), args[1])
 	case emulator.ARCH_ARM64, emulator.ARCH_X86_64:
 		r = sys.fcntl.fstat64(ctx, uint32(args[0]), args[1])
 	default:
@@ -237,6 +259,11 @@ func (sys *Syscall) Emulate_gettid(ctx linux.Context, args ...uint64) uint64 {
 	return uint64(r)
 }
 
+func (sys *Syscall) Emulate_sysinfo(ctx linux.Context, args ...uint64) uint64 {
+	r := sys.sysinfo(ctx, args[0])
+	return uint64(r)
+}
+
 func (sys *Syscall) Emulate_socket(ctx linux.Context, args ...uint64) uint64 {
 	r := sys.socket.socket(ctx, int32(args[0]), int32(args[1]), int32(args[2]))
 	return uint64(r)
@@ -259,6 +286,11 @@ func (sys *Syscall) Emulate_execve(ctx linux.Context, args ...uint64) uint64 {
 
 func (sys *Syscall) Emulate_mmap(ctx linux.Context, args ...uint64) uint64 {
 	r := sys.mman.mmap(ctx, args[0], size_t(args[1]), emulator.MemProt(args[2]), int32(args[3]), int32(args[4]), off_t(args[5]))
+	return r
+}
+
+func (sys *Syscall) Emulate_mmap2(ctx linux.Context, args ...uint64) uint64 {
+	r := sys.mman.mmap2(ctx, args[0], size_t(args[1]), emulator.MemProt(args[2]), int32(args[3]), int32(args[4]), size_t(args[5]))
 	return r
 }
 

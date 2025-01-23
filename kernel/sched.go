@@ -1,7 +1,6 @@
 package kernel
 
 import (
-	"fmt"
 	"sync"
 	"unsafe"
 
@@ -69,14 +68,12 @@ func (s *sched) clone(ctx linux.Context, flags int32, child_stack, parent_tid, t
 	}
 	if flags&CLONE_VFORK != 0 {
 		<-task.Done()
-		fmt.Println(task.Err())
 		task.Close()
 	} else {
 		s.tasks.Store(pid, task)
 		go func() {
 			<-task.Done()
 			s.tasks.Delete(pid)
-			fmt.Println(task.Err())
 			task.Close()
 		}()
 	}

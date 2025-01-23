@@ -3,7 +3,9 @@ package linux
 type NR int
 
 const (
-	NR_ignore NR = iota
+	NR_none NR = iota
+	NR_reject
+	NR_ignore
 	NR_io_setup
 	NR_io_destroy
 	NR_io_submit
@@ -60,6 +62,7 @@ const (
 	NR_fchmodat
 	NR_fchownat
 	NR_fchown
+	NR_open
 	NR_openat
 	NR_close
 	NR_vhangup
@@ -83,8 +86,8 @@ const (
 	NR_splice
 	NR_tee
 	NR_readlinkat
-	NR_newfstatat
-	NR_fstat
+	NR_fstatat64
+	NR_fstat64
 	NR_sync
 	NR_fsync
 	NR_fdatasync
@@ -227,6 +230,7 @@ const (
 	NR_clone
 	NR_execve
 	NR_mmap
+	NR_mmap2
 	NR_fadvise64
 	NR_swapon
 	NR_swapoff
