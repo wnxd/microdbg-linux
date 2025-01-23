@@ -4,7 +4,7 @@ go 1.23.4
 
 require (
 	github.com/shirou/gopsutil/v4 v4.24.12
-	github.com/wnxd/microdbg v0.0.0-20250123152647-18ffdfa347d6
+	github.com/wnxd/microdbg v0.0.0-20250123160108-f34c2a4484b1
 )
 
 require (
