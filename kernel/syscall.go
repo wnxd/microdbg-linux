@@ -11,6 +11,7 @@ type Syscall struct {
 	fcntl
 	futex
 	signal
+	resource
 	prctl
 	socket
 	mman
@@ -82,6 +83,10 @@ func (sys *Syscall) Get(nr linux.NR) func(linux.Context, ...uint64) uint64 {
 		return sys.Emulate_rt_sigaction
 	case linux.NR_rt_sigprocmask:
 		return sys.Emulate_rt_sigprocmask
+	case linux.NR_getrlimit:
+		return sys.Emulate_getrlimit
+	case linux.NR_setrlimit:
+		return sys.Emulate_setrlimit
 	case linux.NR_prctl:
 		return sys.Emulate_prctl
 	case linux.NR_gettimeofday:
@@ -236,6 +241,16 @@ func (sys *Syscall) Emulate_rt_sigaction(ctx linux.Context, args ...uint64) uint
 
 func (sys *Syscall) Emulate_rt_sigprocmask(ctx linux.Context, args ...uint64) uint64 {
 	r := sys.signal.rt_sigprocmask(ctx, int32(args[0]), args[1], args[2], size_t(args[3]))
+	return uint64(r)
+}
+
+func (sys *Syscall) Emulate_getrlimit(ctx linux.Context, args ...uint64) uint64 {
+	r := sys.resource.getrlimit(ctx, int32(args[0]), args[1])
+	return uint64(r)
+}
+
+func (sys *Syscall) Emulate_setrlimit(ctx linux.Context, args ...uint64) uint64 {
+	r := sys.resource.setrlimit(ctx, int32(args[0]), args[1])
 	return uint64(r)
 }
 
