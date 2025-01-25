@@ -2,7 +2,6 @@ package kernel
 
 import (
 	"errors"
-	"unsafe"
 
 	linux "github.com/wnxd/microdbg-linux"
 	"github.com/wnxd/microdbg/debugger"
@@ -59,31 +58,8 @@ func (k *Kernel) SetErrno(err linux.Errno) {
 }
 
 func (k *Kernel) armIntr(ctx debugger.Context, intno uint64, data any) debugger.HookResult {
-	const CPSR_T = 1 << 5
-
 	if intno != emu_arm.ARM_INTR_EXCP_SWI {
 		return debugger.HookResult_Next
-	}
-	pc_cpsr, err := ctx.RegReadBatch(emu_arm.ARM_REG_PC, emu_arm.ARM_REG_CPSR)
-	if err != nil {
-		return debugger.HookResult_Next
-	}
-	if pc_cpsr[1]&CPSR_T != 0 {
-		var code uint16
-		err = ctx.ToPointer(pc_cpsr[0]-2).MemReadPtr(2, unsafe.Pointer(&code))
-		if err != nil {
-			return debugger.HookResult_Next
-		} else if swi := code & 0xff; swi != 0 {
-			return debugger.HookResult_Next
-		}
-	} else {
-		var code uint32
-		err = ctx.ToPointer(pc_cpsr[0]-4).MemReadPtr(4, unsafe.Pointer(&code))
-		if err != nil {
-			return debugger.HookResult_Next
-		} else if swi := code & 0xffffff; swi != 0 {
-			return debugger.HookResult_Next
-		}
 	}
 	nr, err := ctx.RegRead(emu_arm.ARM_REG_R7)
 	if err != nil {
@@ -106,18 +82,6 @@ func (k *Kernel) armIntr(ctx debugger.Context, intno uint64, data any) debugger.
 
 func (k *Kernel) arm64Intr(ctx debugger.Context, intno uint64, data any) debugger.HookResult {
 	if intno != emu_arm.ARM_INTR_EXCP_SWI {
-		return debugger.HookResult_Next
-	}
-	pc, err := ctx.RegRead(emu_arm64.ARM64_REG_PC)
-	if err != nil {
-		return debugger.HookResult_Next
-	}
-	var code uint32
-	err = ctx.ToPointer(pc-4).MemReadPtr(4, unsafe.Pointer(&code))
-	if err != nil {
-		return debugger.HookResult_Next
-	}
-	if swi := (code >> 5) & 0xffff; swi != 0 {
 		return debugger.HookResult_Next
 	}
 	nr, err := ctx.RegRead(emu_arm64.ARM64_REG_X8)
