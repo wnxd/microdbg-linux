@@ -194,7 +194,7 @@ func (sys *Syscall) Emulate_readlinkat(ctx linux.Context, args ...uint64) uint64
 
 func (sys *Syscall) Emulate_fstatat64(ctx linux.Context, args ...uint64) uint64 {
 	var r int32
-	switch ctx.Debugger().Emulator().Arch() {
+	switch ctx.Debugger().Arch() {
 	case emulator.ARCH_ARM, emulator.ARCH_X86:
 		r = sys.fcntl.fstatat3264(ctx, int32(args[0]), args[1], args[2], int32(args[3]))
 	case emulator.ARCH_ARM64, emulator.ARCH_X86_64:
@@ -208,7 +208,7 @@ func (sys *Syscall) Emulate_fstatat64(ctx linux.Context, args ...uint64) uint64 
 
 func (sys *Syscall) Emulate_fstat64(ctx linux.Context, args ...uint64) uint64 {
 	var r int32
-	switch ctx.Debugger().Emulator().Arch() {
+	switch ctx.Debugger().Arch() {
 	case emulator.ARCH_ARM, emulator.ARCH_X86:
 		r = sys.fcntl.fstat3264(ctx, uint32(args[0]), args[1])
 	case emulator.ARCH_ARM64, emulator.ARCH_X86_64:

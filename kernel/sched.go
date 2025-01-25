@@ -45,7 +45,7 @@ func (s *sched) clone(ctx linux.Context, flags int32, child_stack, parent_tid, t
 		taskCtx.ArgWrite(debugger.Calling_Default, call.arg)
 	}
 	if flags&CLONE_SETTLS != 0 {
-		switch dbg.Emulator().Arch() {
+		switch dbg.Arch() {
 		case emulator.ARCH_ARM:
 			taskCtx.RegWrite(emu_arm.ARM_REG_C13_C0_3, tls)
 		case emulator.ARCH_ARM64:

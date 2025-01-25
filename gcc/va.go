@@ -8,7 +8,7 @@ import (
 )
 
 func NewVaList(dbg debugger.Debugger, ptr uint64) (debugger.Args, error) {
-	switch dbg.Emulator().Arch() {
+	switch dbg.Arch() {
 	case emulator.ARCH_ARM, emulator.ARCH_X86:
 		return NewStdVaList(dbg, ptr, 4)
 	case emulator.ARCH_ARM64:

@@ -20,7 +20,7 @@ type Kernel struct {
 func NewKernel(dbg debugger.Debugger) (*Kernel, error) {
 	k := new(Kernel)
 	var handleIntr debugger.InterruptCallback
-	switch dbg.Emulator().Arch() {
+	switch dbg.Arch() {
 	case emulator.ARCH_ARM:
 		handleIntr = k.armIntr
 	case emulator.ARCH_ARM64:
