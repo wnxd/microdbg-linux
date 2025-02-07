@@ -114,7 +114,7 @@ func (f *fcntl) dup3(ctx linux.Context, oldfd, newfd uint32, flags int32) int32 
 	return int32(newfd)
 }
 
-func (f *fcntl) fcntl(ctx linux.Context, fd, cmd uint32, arg uint64) int32 {
+func (f *fcntl) fcntl(ctx linux.Context, fd, cmd uint32, arg ulong_t) int32 {
 	const (
 		F_DUPFD = iota
 		F_GETFD

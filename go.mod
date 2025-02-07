@@ -3,8 +3,8 @@ module github.com/wnxd/microdbg-linux
 go 1.23.4
 
 require (
-	github.com/shirou/gopsutil/v4 v4.24.12
-	github.com/wnxd/microdbg v0.0.0-20250125163537-004a62dd30f9
+	github.com/shirou/gopsutil/v4 v4.25.1
+	github.com/wnxd/microdbg v0.0.0-20250207073549-199b158d7a7d
 )
 
 require (
@@ -15,6 +15,6 @@ require (
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
 	github.com/tklauser/numcpus v0.9.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/exp v0.0.0-20250207012021-f9890c6ad9f3 // indirect
+	golang.org/x/sys v0.30.0 // indirect
 )

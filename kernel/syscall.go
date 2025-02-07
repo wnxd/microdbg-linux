@@ -13,7 +13,7 @@ type Syscall struct {
 	signal
 	resource
 	prctl
-	socket
+	network
 	mman
 	sched
 }
@@ -47,6 +47,8 @@ func (sys *Syscall) Get(nr linux.NR) func(linux.Context, ...uint64) uint64 {
 		return sys.Emulate_dup3
 	case linux.NR_fcntl:
 		return sys.Emulate_fcntl
+	case linux.NR_ioctl:
+		return sys.Emulate_ioctl
 	case linux.NR_faccessat:
 		return sys.Emulate_faccessat
 	case linux.NR_open:
@@ -138,7 +140,12 @@ func (sys *Syscall) Emulate_dup3(ctx linux.Context, args ...uint64) uint64 {
 }
 
 func (sys *Syscall) Emulate_fcntl(ctx linux.Context, args ...uint64) uint64 {
-	r := sys.fcntl.fcntl(ctx, uint32(args[0]), uint32(args[1]), args[2])
+	r := sys.fcntl.fcntl(ctx, uint32(args[0]), uint32(args[1]), ulong_t(args[2]))
+	return uint64(r)
+}
+
+func (sys *Syscall) Emulate_ioctl(ctx linux.Context, args ...uint64) uint64 {
+	r := sys.ioctl(ctx, uint32(args[0]), uint32(args[1]), args[2])
 	return uint64(r)
 }
 
@@ -280,7 +287,7 @@ func (sys *Syscall) Emulate_sysinfo(ctx linux.Context, args ...uint64) uint64 {
 }
 
 func (sys *Syscall) Emulate_socket(ctx linux.Context, args ...uint64) uint64 {
-	r := sys.socket.socket(ctx, int32(args[0]), int32(args[1]), int32(args[2]))
+	r := sys.network.socket(ctx, int32(args[0]), int32(args[1]), int32(args[2]))
 	return uint64(r)
 }
 
